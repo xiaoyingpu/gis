@@ -37,6 +37,12 @@ class Reader:
         self._bands = 0             # number of channels for one pixel
         self._rows = 0              # y axis
         self._cols = 0              # x axis
+        self.x_list = []
+        self.y_list = []
+        self.elevation_list = []
+        self.k1 = 0
+        self.b1 = 0
+        self.n_step=0
 
         self._define_boundaries()   # initialize boundary variables
 
@@ -103,25 +109,46 @@ class Reader:
         x1, x2: easting
         y1, y2: northing
         """
-        elevation_list = []
-        x_list = []
-        y_list = []
-        k = (y2 - y1) / (x2 - x1)
-        b = y1 - k * x1
-        n_step = (x2 - x1) // self._pixelWidth
+        self.k1 = (y2 - y1) / (x2 - x1)
+        self.b1 = y1 - self.k1 * x1
+        self.n_step = (x2 - x1) // self._pixelWidth
 
-        for i in range(int(n_step)):
+        for i in range(int(self.n_step)):
             x = x1 + i * self._pixelWidth
-            y = k * x + b
-            x_list.append(x)
-            y_list.append(y)
-
+            y = self.k1 * x + self.b1
+            self.x_list.append(x)
+            self.y_list.append(y)
             value = self.get_pixel_value(x, y)
-            elevation_list.append(value)
+            self.elevation_list.append(value)
 
-        colors = np.random.rand(int(n_step))
-        plt.scatter(x_list, elevation_list)
+
+
+    def get_hindrance(self):
+        hindrance_list = []
+        sensor_elev = self.elevation_list[0]
+        recv_elev = self.elevation_list[-1]
+        delta_elev = sensor_elev - recv_elev
+        x_square = (self.x_list[0] - self.x_list[-1]) ** 2
+        y_square = (self.y_list[0] - self.y_list[-1]) ** 2
+        distance = (x_square + y_square) ** 0.5
+
+        k = (delta_elev) / (distance)
+        b = self.elevation_list[0] - k * self.x_list[0]
+
+        for i in range(len(self.elevation_list)):
+            supposed_elev = self.x_list[i] * self.k1  + self.b1
+            if self.elevation_list[i] >= supposed_elev:
+                return (self.x_list[i],self.y_list[i])
+
+    def plot_results():
+        fig = plt.figure()
+        fig.suptitle('Cross section', fontsize=14, fontweight='bold')
+        ax = fig.add_subplot(111)
+
+        ax.plot(self.y_list, self.elevation_list)
+        ax.set_xlabel('easting')
         plt.show()
+
 
 
 
@@ -133,11 +160,16 @@ if __name__ == "__main__":
     # the boat launch
     # lat: 40.955312, long: -76.877387
     # easting: 341998.2, northing: 4535493.4
+
+
+    # north size of winfield
+    # 342279.95, 4532332.21
     t_start = time.time()
     reader = Reader("../lewisburg_pa/lewisburg_pa.dem")
 
     # print(reader.get_pixel_value(341674.7, 4535455.3))
-    reader.get_line_feature(341685.7, 4535445.9, 341998.2, 4535493.4)
+    reader.get_line_feature(338977.89, 4536688.13, 339514.93, 4534804.52)
+    reader.plot_results()
     reader.close()
     t_end = time.time()
     print("Time: " + str(t_end - t_start))

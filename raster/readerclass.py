@@ -9,6 +9,8 @@ from shapely.wkb import loads
 import numpy as np
 import matplotlib.pyplot as plt
 
+# see http://www.gis.usu.edu/~chrisg/python/2009/lectures/ospy_slides4.pdf
+
 
 class Reader:
     """
@@ -28,21 +30,36 @@ class Reader:
             exit(1)
         print(file_name + " read successfully")
 
+        # coordinates:
+        #  |
+        #--+--------------> x
+        #  |
+        #  |
+        #  |
+        #  |
+        #  V y
+        # 
         # instance variables
+        # originX and originY are at the upper left corner of the raster image
+        # these coordinates are in universal transverse merator coordinate system
+        #, a 2-D projection coordinate system that is suitable for a large-`scale`
+        # map, i.e., around Lewisburg instead of the entire state
+        # UTM could be converted to latitude are longitudes, but UTM 
+        # might provid more precision
         self._originX = 0           # easting; UTM
         self._originY = 0           # northing; UTM
 
         self._pixelWidth = 0
         self._pixelHeight = 0
-        self._bands = 0             # number of channels for one pixel
-        self._rows = 0              # y axis
-        self._cols = 0              # x axis
-        self.x_list = []
-        self.y_list = []
-        self.elevation_list = []
-        self.k1 = 0
-        self.b1 = 0
-        self.n_step=0
+        self._bands = 0             # number of `channels` (like RGB channels) for one pixel
+        self._rows = 0              # along y axis
+        self._cols = 0              # along x axis
+        self.x_list = []            # x-coordinates along the cross-section of choice
+        self.y_list = []            # y-coordinates along the cross-section of choice
+        self.elevation_list = []    # the elevation at point (x,y), unit: m
+        self.k1 = 0                 # slop of transect in x-y plane
+        self.b1 = 0                 # y-axis intersection
+        self.n_step=0               
 
         self._define_boundaries()   # initialize boundary variables
 
@@ -52,7 +69,6 @@ class Reader:
         """
         pszProjection = self.data_set.GetProjectionRef()
         if pszProjection is not None:
-
             hSRS = osr.SpatialReference()
             if hSRS.ImportFromWkt(pszProjection ) == gdal.CE_None:
                 pszPrettyWkt = hSRS.ExportToPrettyWkt(False)
@@ -63,7 +79,6 @@ class Reader:
     def _define_boundaries(self):
         """
         Defines the boundary of the raster files
-        Origin x, y's are defined in ??? coordinates
         """
         self._cols = self.data_set.RasterXSize
         self._rows = self.data_set.RasterYSize
@@ -83,15 +98,23 @@ class Reader:
         self.data_set = None
 
     def get_x_offset(self, x):
+        """
+        gets the pixel index on x-axis
+        """
         return int((x - self._originX) / self._pixelWidth)
 
     def get_y_offset(self, y):
+        """
+        gets the pixel index on x-axis
+        """
         return int((y - self._originY) / self._pixelHeight)
 
     def get_pixel_value(self, x, y):
         """
         x: easting
         y: northing
+        the pixel value is -32768? for data points
+        outside the raster image
         """
 
         x_offset = self.get_x_offset(x)
@@ -106,8 +129,13 @@ class Reader:
 
     def get_line_feature(self, x1, y1, x2, y2):
         """
+        four parameters are in UTM
         x1, x2: easting
         y1, y2: northing
+        (x1, y1): coordinate for the transmitter
+        (x2, y2): coordinate for the receiver
+        samples the transect with interval = pixel width and
+        generates the elevation list
         """
         self.k1 = (y2 - y1) / (x2 - x1)
         self.b1 = y1 - self.k1 * x1
@@ -124,6 +152,9 @@ class Reader:
 
 
     def get_hindrance(self):
+        """
+        this method might be broken
+        """
         hindrance_list = []
         sensor_elev = self.elevation_list[0]
         recv_elev = self.elevation_list[-1]
@@ -138,21 +169,26 @@ class Reader:
         for i in range(len(self.elevation_list)):
             supposed_elev = self.x_list[i] * self.k1  + self.b1
             if self.elevation_list[i] >= supposed_elev:
-                return (self.x_list[i],self.y_list[i])
+                return (self.x_list[i], self.elevation_list[i])
 
-    def plot_results():
+    def plot_results(self):
+        """
+        this method is broken?
+        """
         fig = plt.figure()
         fig.suptitle('Cross section', fontsize=14, fontweight='bold')
-        ax = fig.add_subplot(111)
-
-        ax.plot(self.y_list, self.elevation_list)
+        ax = fig.add_subplot(111)        
+        ax.plot(self.x_list, self.elevation_list)
         ax.set_xlabel('easting')
+        ax.set_ylabel('elevation (m)')
+        
         plt.show()
 
 
 
 
 if __name__ == "__main__":
+    # some convenient coordinates:
     # Breakiron:
     # lat: 40.954824, long: -76.881087
     # easting: 341685.7, northing: 4535445.9

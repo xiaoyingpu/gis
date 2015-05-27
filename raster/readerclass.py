@@ -38,13 +38,13 @@ class Reader:
         #  |
         #  |
         #  V y
-        # 
+        #
         # instance variables
         # originX and originY are at the upper left corner of the raster image
         # these coordinates are in universal transverse merator coordinate system
         #, a 2-D projection coordinate system that is suitable for a large-`scale`
         # map, i.e., around Lewisburg instead of the entire state
-        # UTM could be converted to latitude are longitudes, but UTM 
+        # UTM could be converted to latitude are longitudes, but UTM
         # might provid more precision
         self._originX = 0           # easting; UTM
         self._originY = 0           # northing; UTM
@@ -59,7 +59,7 @@ class Reader:
         self.elevation_list = []    # the elevation at point (x,y), unit: m
         self.k1 = 0                 # slop of transect in x-y plane
         self.b1 = 0                 # y-axis intersection
-        self.n_step=0               
+        self.n_step=0
 
         self._define_boundaries()   # initialize boundary variables
 
@@ -177,11 +177,11 @@ class Reader:
         """
         fig = plt.figure()
         fig.suptitle('Cross section', fontsize=14, fontweight='bold')
-        ax = fig.add_subplot(111)        
+        ax = fig.add_subplot(111)
         ax.plot(self.x_list, self.elevation_list)
         ax.set_xlabel('easting')
         ax.set_ylabel('elevation (m)')
-        
+
         plt.show()
 
 
@@ -210,8 +210,4 @@ if __name__ == "__main__":
     t_end = time.time()
     print("Time: " + str(t_end - t_start))
 
-    # add API: get_pixel_value(offset's)
-    # another class: ruler:
-    #   __init__(self, easting, northing)
-    #   loops through every grid and get_pixel_value(offset's)
     # add converter: distance -> easting and northing
